@@ -6,11 +6,12 @@ void bootMain(void) {
 	int i = 0;
 	void (*elf)(void);
 	elf = (void(*)(void))0x8c00;
-	for (i = 0; i < 200; i++) {
+	for (i = 0; i < 5; i++) {
 		readSect((void*)(elf + i*512), 1+i);
 	}
 	// readSect((void*)elf, 1); // loading sector 1 to 0x8c00
 	// TODO jumping to the loaded program
+	elf();
 }
 
 void waitDisk(void) { // waiting for disk
