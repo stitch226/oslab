@@ -60,6 +60,7 @@ void timerHandle(struct TrapFrame *tf) {
 
 void keyboardHandle(struct TrapFrame *tf) {
 	// TODO in lab2
+    putChar(getChar(getKeyCode()));
 	return;
 }
 
@@ -77,15 +78,38 @@ void syscallPrint(struct TrapFrame *tf) {
 	char *str = (char*)tf->edx;
 	int size = tf->ebx;
 	int i = 0;
-	int pos = 0;
+    int pos = 0;
 	char character = 0;
 	uint16_t data = 0;
 	asm volatile("movw %0, %%es"::"m"(sel));
 	for (i = 0; i < size; i++) {
 		asm volatile("movb %%es:(%1), %0":"=r"(character):"r"(str+i));
 		// TODO in lab2
-	}
-	
+        if (character == '\n') {
+            displayRow++;
+            displayCol = 0;
+            if (displayRow == 25) {
+                displayRow = 24;
+                scrollScreen();
+            }
+        }
+        else {
+            data = character | (0x0c << 8);
+            pos = (80 * displayRow + displayCol) * 2;
+            asm volatile("movw %0, (%1)"::"r"(data),"r"(pos+0xb8000));
+            displayCol++;
+            if (displayCol == 80) {
+                displayRow++;
+                displayCol = 0;
+                if (displayRow == 25) {
+                     displayRow = 24;
+                     scrollScreen();
+                }
+            }
+
+        }
+
+	}	
 	updateCursor(displayRow, displayCol);
 	//TODO take care of return value
 }

@@ -692,6 +692,82 @@ int rmdir (const char *driver, const char *destDirPath) {
  */
 int cp (const char *driver, const char *srcFilePath, const char *destFilePath) {
     // TODO in lab2
+    FILE *file = NULL;
+    FILE *fileSrc = NULL;
+    char tmp = 0;
+    int ret = 0;
+    int size = 0;
+    int length = 0;
+    SuperBlock superBlock;
+    int fatherInodeOffset = 0;
+    int destInodeOffset = 0;
+    Inode fatherInode;
+    Inode destInode;
+
+    if (driver == NULL || srcFilePath == NULL || destFilePath == NULL) {
+        printf("driver == NULL || srcFilePath == NULL || destFilePath == NULL.\n");
+        return -1;
+    }
+    file = fopen(driver, "r+");
+    if (file == NULL) {
+        printf("Failed to open driver.\n");
+        return -1;
+    }
+    fileSrc = fopen(srcFilePath,"r");
+    if(fileSrc == NULL){
+        printf("Failed to open srcFilePath.\n");
+        fclose(file);
+        return -1;
+    }
+    ret= readSuperBlock(file, &superBlock);
+    if (ret == -1) {
+        printf("Failed to load superBlock.\n");
+        fclose(file);
+        fclose(fileSrc);
+        return -1;
+    }
+    length = stringLen(destFilePath);
+    if (destFilePath[length - 1] == '/') {
+        printf("Incorrect destination file path.\n");
+        fclose(file);
+        fclose(fileSrc);
+        return -1;
+    }
+    ret = stringChrR(destFilePath, '/', &size);
+    if (ret == -1) {
+        printf("Incorrect destination file path.\n");
+        fclose(file);
+        fclose(fileSrc);
+        return -1;
+    }
+    tmp = *((char*)destFilePath + size + 1);
+    *((char*)destFilePath + size + 1) = 0;
+    ret = readInode(file, &superBlock, &fatherInode, &fatherInodeOffset, destFilePath);
+    *((char*)destFilePath + size + 1) = tmp;
+    if (ret == -1) {
+        printf("Failed to read father inode.\n");
+        fclose(file);
+        fclose(fileSrc);
+        return -1;
+    }
+    ret = allocInode(file, &superBlock, &fatherInode, fatherInodeOffset,
+        &destInode, &destInodeOffset, destFilePath + size + 1, REGULAR_TYPE);
+    if (ret == -1) {
+        printf("Failed to allocate inode.\n");
+        fclose(file);
+        fclose(fileSrc);
+        return -1;
+    }
+    ret = copyData(file, fileSrc, &superBlock, &destInode, destInodeOffset);
+    fclose(fileSrc);
+    if (ret == -1){
+        printf("Failed to copy data.\n");
+        fclose(file);
+        return -1;
+    }
+    printf("cp %s to %s\n", srcFilePath, destFilePath);
+    printf("CP success.\n%d inodes and %d data blocks available.\n", superBlock.availInodeNum, superBlock.availBlockNum);
+    fclose(file);
     return 0;
 }
 
